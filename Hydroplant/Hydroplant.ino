@@ -26,6 +26,14 @@ void setup() {
   randomSeed(analogRead(0));
   cc.setup(0);
   cc.setDemo(true);
+
+  if (demo) {
+    pinMode(A0, INPUT);
+    pinMode(A1, INPUT);
+    pinMode(A2, INPUT);
+    pinMode(A3, INPUT);
+    pinMode(A4, INPUT);
+  }
 }
 
 void loop() {
@@ -42,7 +50,7 @@ void loop() {
     } else if (inp.length() >= 1 && inp.substring(0, 1) == "C") {
       char *c = &inp[0];
       int pos = strchr(c, ';');
-      double new_pos = inp.substring(1, pos).toDouble();      
+      double new_pos = inp.substring(1, pos).toDouble();
       double new_angle = inp.substring(pos + 1, inp.length()).toDouble();
       cc.goTo(new_pos, new_angle);
     } else {
@@ -52,13 +60,23 @@ void loop() {
   if (mlls + value_intervall <= millis()) {
     mlls = millis();
     if (demo) {
-      temp_val = (double)random(15000, 26000) / 1000;
-      light_val = (double)random(0, 24000) / 1000;
-      light_status = random(0, 2) >= 1;
-      ph_val = (double)random(1000, 9000) / 1000;
+      /*
+      temp_val = (double)map(analogRead(A0), 0, 1023, 14000, 27000) / 1000;
+      light_val = (double)map(analogRead(A1), 0, 1023, 0000, 24000) / 1000;
+      light_status = sin(millis() / 10000) >= 0;
+      ph_val = (double)map(analogRead(A2), 0, 1023, 0000, 14000) / 1000;
       ec_val = (double)random(0, 5000) / 1000;
-      flow_val = (double)random(0, 15000) / 1000;
-      level_val = (double)random(0, 11000) / 1000;
+      flow_val = (double)map(analogRead(A3), 0, 1023, 0000, 10000) / 1000;
+      level_val = (double)map(analogRead(A4), 0, 1023, 0000, 10000) / 1000;
+      */
+
+      temp_val = (double)map(random(0, 1024), 0, 1023, 14000, 27000) / 1000;
+      light_val = (double)map(random(0, 1024), 0, 1023, 0000, 24000) / 1000;
+      light_status = sin(millis() / 10000) >= 0;
+      ph_val = (double)map(random(0, 1024), 0, 1023, 0000, 14000) / 1000;
+      ec_val = (double)random(0, 5000) / 1000;
+      flow_val = (double)map(random(0, 1024), 0, 1023, 0000, 10000) / 1000;
+      level_val = (double)map(random(0, 1024), 0, 1023, 0000, 10000) / 1000;
     }
 
     Serial.print("VTEMP" + String(temp_val) + "\n");
