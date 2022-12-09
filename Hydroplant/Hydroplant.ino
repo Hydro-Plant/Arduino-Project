@@ -38,13 +38,26 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {  // Handle inputs
-    String inp = Serial.readString();
+    bool reading = true;
+    String inp = "";
+    while(reading) {
+      if(Serial.available() > 0) {
+        char x = Serial.read();
+        if(x != '\n') {
+          inp += x;
+        }else {
+          reading = false;
+        }
+      }
+    }
+    
     inp.trim();
     if (inp == "?") {
       Serial.write("OK");
-    } else if (inp.length() >= 2 && inp.substring(0, 2) == "VT") {
-      int len = String((char)inp[2]).toInt();
-      value_intervall = inp.substring(3, 3 + len).toInt();
+    } else if (inp.length() >= 5 && inp.substring(0, 1) == "O") {
+      if (inp.substring(1, 5) == "INTV") {
+        value_intervall = inp.substring(5, inp.length()).toInt();
+      }
     } else if (inp.length() >= 2 && inp.substring(0, 2) == "CR") {
       cc.reset();
     } else if (inp.length() >= 1 && inp.substring(0, 1) == "C") {
@@ -56,11 +69,12 @@ void loop() {
     } else {
       std_hofmann::debug("FALSE");
     }
+    std_hofmann::debug(inp);
   }
   if (mlls + value_intervall <= millis()) {
     mlls = millis();
     if (demo) {
-      /*
+      
       temp_val = (double)map(analogRead(A0), 0, 1023, 14000, 27000) / 1000;
       light_val = (double)map(analogRead(A1), 0, 1023, 0000, 24000) / 1000;
       light_status = sin(millis() / 10000) >= 0;
@@ -68,8 +82,8 @@ void loop() {
       ec_val = (double)random(0, 5000) / 1000;
       flow_val = (double)map(analogRead(A3), 0, 1023, 0000, 10000) / 1000;
       level_val = (double)map(analogRead(A4), 0, 1023, 0000, 10000) / 1000;
-      */
-
+      
+      /*
       temp_val = (double)map(random(0, 1024), 0, 1023, 14000, 27000) / 1000;
       light_val = (double)map(random(0, 1024), 0, 1023, 0000, 24000) / 1000;
       light_status = sin(millis() / 10000) >= 0;
@@ -77,11 +91,12 @@ void loop() {
       ec_val = (double)random(0, 5000) / 1000;
       flow_val = (double)map(random(0, 1024), 0, 1023, 0000, 10000) / 1000;
       level_val = (double)map(random(0, 1024), 0, 1023, 0000, 10000) / 1000;
+      */
     }
 
     Serial.print("VTEMP" + String(temp_val) + "\n");
     Serial.print("VLIGT" + String(light_val) + "\n");
-    Serial.print("VLGST" + String(light_status) + "\n");
+    Serial.print("SLIGT" + String(light_status) + "\n");
     Serial.print("VPH" + String(ph_val) + "\n");
     Serial.print("VEC" + String(ec_val) + "\n");
     Serial.print("VFLOW" + String(flow_val) + "\n");

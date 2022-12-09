@@ -1,17 +1,7 @@
 #include "CameraControll.h"
 
-/*
-Servo rotation;
-  double pos;
-  double to_pos;
-  double angle;
-  double to_angle;
-  bool demo;
-  enum state {waiting, resetting, moving};
-*/
+CameraControll::CameraControll(){
 
-CameraControll::CameraControll() {
-  
 };
 
 void CameraControll::setup(int servo_pin) {
@@ -20,15 +10,19 @@ void CameraControll::setup(int servo_pin) {
   angle = 0;
   to_pos = 0;
   to_angle = 0;
-  bool moving = false;
   bool demo = false;
 }
 
 void CameraControll::reset() {
-  cur_state = resetting;
+  std_hofmann::debug("I should reset");
+  if (cur_state != moving) {
+    std_hofmann::debug("I should and will reset because " + cur_state);
+    cur_state = resetting;
+  }
 }
 
 void CameraControll::goTo(double pos, double angle) {
+  std_hofmann::debug("I should go to");
   this->to_angle = angle;
   this->to_pos = pos;
   cur_state = moving;
