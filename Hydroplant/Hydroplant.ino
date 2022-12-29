@@ -1,7 +1,15 @@
 #include "CameraControll.h"
 #include "std_hofmann.h"
 
-bool demo = true;
+#define SERVO 3
+#define STEP 5
+#define DIR 4
+#define BTN 2
+
+const bool demo = false;
+
+bool execute_command = false;
+String com_buffer = "";
 
 int value_intervall = 10000;
 long mlls = 0;
@@ -24,8 +32,8 @@ void setup() {
   Serial.begin(115200);
   mlls = millis();
   randomSeed(analogRead(0));
-  cc.setup(0);
-  cc.setDemo(true);
+  cc.setup(SERVO, DIR, STEP, BTN);
+  cc.setDemo(demo);
 
   if (demo) {
     pinMode(A0, INPUT);
@@ -38,43 +46,40 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {  // Handle inputs
-    bool reading = true;
-    String inp = "";
-    while(reading) {
-      if(Serial.available() > 0) {
-        char x = Serial.read();
-        if(x != '\n') {
-          inp += x;
-        }else {
-          reading = false;
-        }
-      }
+    char x = Serial.read();
+    if (x != '\n') {
+      com_buffer += x;
+    } else {
+      execute_command = true;
     }
-    
-    inp.trim();
-    if (inp == "?") {
+  }
+  if (execute_command) {
+    com_buffer.trim();
+    if (com_buffer == "?") {
       Serial.write("OK");
-    } else if (inp.length() >= 5 && inp.substring(0, 1) == "O") {
-      if (inp.substring(1, 5) == "INTV") {
-        value_intervall = inp.substring(5, inp.length()).toInt();
+    } else if (com_buffer.length() >= 5 && com_buffer.substring(0, 1) == "O") {
+      if (com_buffer.substring(1, 5) == "INTV") {
+        value_intervall = com_buffer.substring(5, com_buffer.length()).toInt();
       }
-    } else if (inp.length() >= 2 && inp.substring(0, 2) == "CR") {
+    } else if (com_buffer.length() >= 2 && com_buffer.substring(0, 2) == "CR") {
       cc.reset();
-    } else if (inp.length() >= 1 && inp.substring(0, 1) == "C") {
-      char *c = &inp[0];
-      int pos = strchr(c, ';');
-      double new_pos = inp.substring(1, pos).toDouble();
-      double new_angle = inp.substring(pos + 1, inp.length()).toDouble();
-      cc.goTo(new_pos, new_angle);
+    } else if (com_buffer.length() >= 1 && com_buffer.substring(0, 1) == "C") {
+      int pos = com_buffer.indexOf(";");
+      double new_pos = com_buffer.substring(1, pos).toDouble();
+      double new_angle = com_buffer.substring(pos + 1, com_buffer.length()).toDouble();
+      cc.goTo(new_pos, -new_angle);
     } else {
       std_hofmann::debug("FALSE");
     }
-    std_hofmann::debug(inp);
+    std_hofmann::debug(com_buffer);
+    com_buffer = "";
+    execute_command = false;
   }
+
   if (mlls + value_intervall <= millis()) {
     mlls = millis();
     if (demo) {
-      
+
       temp_val = (double)map(analogRead(A0), 0, 1023, 14000, 27000) / 1000;
       light_val = (double)map(analogRead(A1), 0, 1023, 0000, 24000) / 1000;
       light_status = sin(millis() / 10000) >= 0;
@@ -82,7 +87,7 @@ void loop() {
       ec_val = (double)random(0, 5000) / 1000;
       flow_val = (double)map(analogRead(A3), 0, 1023, 0000, 10000) / 1000;
       level_val = (double)map(analogRead(A4), 0, 1023, 0000, 10000) / 1000;
-      
+
       /*
       temp_val = (double)map(random(0, 1024), 0, 1023, 14000, 27000) / 1000;
       light_val = (double)map(random(0, 1024), 0, 1023, 0000, 24000) / 1000;
