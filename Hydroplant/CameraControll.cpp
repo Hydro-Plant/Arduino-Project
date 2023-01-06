@@ -10,10 +10,11 @@ void CameraControll::setup(int servo_pin, int dir_pin, int step_pin, int btn_pin
   pinMode(btn_pin, INPUT);
   this->btn_pin = btn_pin;
   pos = 0;
-  angle = 0;
+  angle = servo_zero;
   to_pos = 0;
-  to_angle = 0;
+  to_angle = servo_zero;
   bool demo = false;
+  cur_state = resetting;
 }
 
 void CameraControll::reset() {
@@ -23,12 +24,13 @@ void CameraControll::reset() {
 }
 
 void CameraControll::goTo(double pos, double angle) {
-  std_hofmann::debug("I should go to");
-  this->to_angle = servo_zero + (angle  * (double)servo_per_ninety_deg / 90);
+  this->to_angle = servo_zero + (angle * (double)servo_per_ninety_deg / 90);
   this->to_pos = max_pos * pos;
   this->from_angle = this->angle;
   this->from_pos = this->pos;
-  cur_state = moving;
+  if(!this->firstReset) cur_state = moving;
+  this->angle = this->to_angle;
+  servo.write(this->angle);
 }
 
 void CameraControll::setDemo(bool demo) {
@@ -37,13 +39,13 @@ void CameraControll::setDemo(bool demo) {
 
 void CameraControll::update() {
   static long last_update = micros();
-  if(last_update > micros()) {
+  if (last_update > micros()) {
     last_update = micros();
   }
   long diff = micros() - last_update;
 
   static long last_step = micros();
-  if(last_step > micros()) {
+  if (last_step > micros()) {
     last_step = 0;
   }
 
@@ -54,50 +56,57 @@ void CameraControll::update() {
       break;
     case resetting:
       if (!demo) {
-        if(change) {
+        if (change) {
           stepper.setDirection(backward);
           angle = servo_zero;
           servo.write(angle);
         }
-        if(digitalRead(btn_pin)) {
+        if (digitalRead(btn_pin)) {
           pos = 0;
           cur_state = waiting;
-        } else if(last_step + (1000000 / max_speed) < micros()) {
+          if (this->firstReset) {
+            this->firstReset = false;
+            cur_state = moving;
+          }
+        } else if (last_step + (1000000 / (steps_per_mm * max_speed)) < micros()) {
           stepper.step();
           pos--;
           last_step = micros();
         }
 
       } else {
-        std_hofmann::debug("Demo: Reset Camera Position");
         cur_state = waiting;
+        std_hofmann::debug("Demo: Reset Camera Position");
         pos = 0;
-        angle = 0;
-        to_pos = 0;
-        to_angle = 0;
+        angle = servo_zero;
       }
       break;
     case moving:
       if (!demo) {
-        if(pos == to_pos) {
+        if (pos == to_pos) {
           servo.write(to_angle);
           cur_state = waiting;
           Serial.print("COK\n");
           break;
-        } else if(last_step + (1000000 / max_speed) < micros()) {
-          if(pos > to_pos) {
+        } else if (last_step + (1000000 / (steps_per_mm * max_speed)) < micros()) {
+          if (pos > to_pos) {
             stepper.setDirection(backward);
             stepper.step();
             pos--;
             last_step = micros();
-          }else {
+          } else {
             stepper.setDirection(forward);
             stepper.step();
             pos++;
             last_step = micros();
           }
-          angle = floor(((float) abs(pos - from_pos) / (float) abs(to_pos - from_pos)) * (to_angle - from_angle) + from_angle);
-          servo.write(angle);
+          /*
+          long newangle = abs(pos - from_pos) * (to_angle - from_angle) / abs(to_pos - from_pos) + from_angle;
+          if(angle != newangle) {
+            angle = newangle;
+            servo.write(angle);
+          }
+          */
         }
       } else {
         pos = to_pos;
@@ -110,5 +119,4 @@ void CameraControll::update() {
   }
 
   last_state = cur_state;
-
 }

@@ -7,12 +7,12 @@
 #define CAMERACONTROLL_H
 
 class CameraControll {
-  const int microsteping = 1;
-  const int servo_zero = 180 / 2;
+  const long microsteping = 32;
+  const int servo_zero = 88;
   const int servo_per_ninety_deg = 180 / 2;
-  const int steps_per_mm = 400 * microsteping;
-  const int max_pos = 50 * steps_per_mm;
-  const int max_speed = 2000;
+  const double steps_per_mm = 200 * microsteping / 0.7;               // 200 steps/U, 0.7 mm/U
+  const long max_pos = 45 * steps_per_mm;
+  const double max_speed = 10;                                // mm / s
   const double max_acc = 2000;
 
   const uint8_t forward = DRV8825_CLOCK_WISE;
@@ -21,6 +21,8 @@ class CameraControll {
   Servo servo;
   DRV8825 stepper;
   int btn_pin = 0;
+
+  bool firstReset = true;
 
   // double speed = 0;
   // double wanted_speed = 0;
