@@ -13,6 +13,7 @@ void PumpControll::setup() {
   pinMode(this->flow_pin, INPUT);
   attachInterrupt(digitalPinToInterrupt(flow_pin), PumpControll::flowMeasure, RISING);
   measurement = 0;
+  motor_pwm = 0;
 }
 
 void PumpControll::setPID(double p, double Ti, double Td) {
@@ -30,7 +31,7 @@ double PumpControll::getFlow() {
 }
 
 void PumpControll::update() {
-  if (std_hofmann::overflowUnsignedLong(micros(), lastUpdate + update_rate, update_rate) && !zero) {
+  if (std_hofmann::overflowUnsignedLong(micros(), lastUpdate + update_rate, update_rate) && (!zero || wanted_flow > 0)) {
     unsigned long sum = 0;
     for (int x = 0; x < mes_len - 1; x++) {
       sum += measurements[x] - measurements[x + 1];
@@ -49,13 +50,11 @@ void PumpControll::update() {
         motor_pwm = 0;
       }
     }
-
     if (new_measurement) {
       new_measurement = false;
       pid_measurements[2] = pid_measurements[1];
       pid_measurements[1] = pid_measurements[0];
       pid_measurements[0] = wanted_flow - measurement;
-
 
       double P = (pid_measurements[0] - pid_measurements[1]) * this->p;
       double I = (pid_measurements[0] + pid_measurements[1]) * delta_time / (2 * this->Ti);

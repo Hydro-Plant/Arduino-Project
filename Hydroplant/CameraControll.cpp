@@ -28,7 +28,7 @@ void CameraControll::goTo(double pos, double angle) {
   this->to_pos = max_pos * pos;
   this->from_angle = this->angle;
   this->from_pos = this->pos;
-  if(!this->firstReset) cur_state = moving;
+  if (!this->firstReset) cur_state = moving;
   this->angle = this->to_angle;
   servo.write(this->angle);
 }
@@ -69,7 +69,9 @@ void CameraControll::update() {
             cur_state = moving;
           }
         } else if (last_step + (1000000 / (steps_per_mm * max_speed)) < micros()) {
-          stepper.step();
+          for (int x = 0; x < step_per_update; x++) {
+            stepper.step();
+          }
           pos--;
           last_step = micros();
         }
@@ -91,12 +93,16 @@ void CameraControll::update() {
         } else if (last_step + (1000000 / (steps_per_mm * max_speed)) < micros()) {
           if (pos > to_pos) {
             stepper.setDirection(backward);
-            stepper.step();
+            for (int x = 0; x < step_per_update; x++) {
+              stepper.step();
+            }
             pos--;
             last_step = micros();
           } else {
             stepper.setDirection(forward);
-            stepper.step();
+            for (int x = 0; x < step_per_update; x++) {
+              stepper.step();
+            }
             pos++;
             last_step = micros();
           }

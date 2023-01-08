@@ -80,6 +80,10 @@ void loop() {
         unsigned long time = (unsigned long)(com_buffer.substring(5, com_buffer.length()).toDouble());  // * 86400000);
         std_hofmann::debug("Light-time: " + String(time));
         lc.setTime(time);
+      } else if(option == "PUMP") {
+        double flow = com_buffer.substring(5, com_buffer.length()).toDouble();
+        std_hofmann::debug("Pump Flow: " + String(flow, 1));
+        pc.setFlow(flow);
       }
     } else if (com_buffer.length() >= 2 && com_buffer.substring(0, 2) == "CR") {
       cc.reset();
