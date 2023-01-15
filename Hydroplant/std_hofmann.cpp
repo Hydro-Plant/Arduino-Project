@@ -1,7 +1,7 @@
 #include "std_hofmann.h"
 
 static void std_hofmann::debug(String msg) {
-  Serial.print("DBUG" + msg + "\n");
+  Serial.print("!DBUG:" + msg + "\n");
 }
 
 static boolean std_hofmann::overflowUnsignedLong(unsigned long value, unsigned long threshold) {

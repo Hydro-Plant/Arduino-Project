@@ -7,7 +7,9 @@
 
 class LightControll {
   private:
-    //int size;
+    const unsigned long light_turn_off_delay = 50;
+    unsigned long turn_off_timer = 0;
+    
     int ldr_pin, led_pin;
     unsigned long daytime, timeperday, intv;
     

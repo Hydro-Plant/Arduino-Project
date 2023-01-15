@@ -8,6 +8,7 @@
 #define SERVO 9
 #define STEP 5
 #define DIR 4
+#define EN 10
 #define BTN 7
 #define LDR A0
 #define LED 6
@@ -21,6 +22,7 @@
 
 const bool demo = false;
 
+bool com_start = false;
 bool execute_command = false;
 String com_buffer = "";
 
@@ -36,7 +38,7 @@ void setup() {
   Serial.begin(115200);
   last_measurement = millis();
 
-  cc.setup(SERVO, DIR, STEP, BTN);
+  cc.setup(SERVO, DIR, STEP, EN, BTN);
 
   // lc.setup(86400000, 54000000, 300000, 1024 / 2);
   lc.setup(20000, 0, 1000, 360);
@@ -57,49 +59,70 @@ void setup() {
 void loop() {
   if (Serial.available() > 0) {  // Handle inputs
     char x = Serial.read();
-    if (x == '?') {
-      delay(1000);
-      Serial.print("OK");
-    } else if (x != '\n') {
-      com_buffer += x;
-    } else {
-      execute_command = true;
+
+    switch (x) {
+      case '?':
+        delay(1000);
+        Serial.print("OK");
+        break;
+      case '\n':
+        com_start = false;
+        execute_command = true;
+        break;
+      case '!':
+        com_start = true;
+      default:
+        if (com_start) com_buffer += x;
+        break;
     }
   }
 
   if (execute_command) {
     com_buffer.trim();
-    while (!isAlpha(com_buffer[0])) {
-      com_buffer.remove(0, 1);
-    }
-    if (com_buffer.length() >= 5 && com_buffer.substring(0, 1) == "O") {
-      String option = com_buffer.substring(1, 5);
-      if (option == "INTV") {
-        value_intervall = com_buffer.substring(5, com_buffer.length()).toInt();
-      } else if (option == "LIGT") {
-        unsigned long time = (unsigned long)(com_buffer.substring(5, com_buffer.length()).toDouble());  // * 86400000);
-        std_hofmann::debug("Light-time: " + String(time));
-        lc.setTime(time);
-      } else if(option == "PUMP") {
-        double flow = com_buffer.substring(5, com_buffer.length()).toDouble();
-        std_hofmann::debug("Pump Flow: " + String(flow, 1));
-        pc.setFlow(flow);
+
+    String com = "";
+    String sub_com = "";
+    String data = "";
+    if (com_buffer.length() >= 2) {
+      com = com_buffer.substring(1, 2);
+      int pos = com_buffer.indexOf(':');
+      if (pos != -1) {
+        sub_com = com_buffer.substring(2, pos);
+        data = com_buffer.substring(pos + 1, com_buffer.length());
+      } else {
+        sub_com = com_buffer.substring(2, com_buffer.length());
       }
-    } else if (com_buffer.length() >= 2 && com_buffer.substring(0, 2) == "CR") {
-      cc.reset();
-    } else if (com_buffer.length() >= 1 && com_buffer.substring(0, 1) == "C") {
-      int pos = com_buffer.indexOf(";");
-      double new_pos = com_buffer.substring(1, pos).toDouble();
-      double new_angle = com_buffer.substring(pos + 1, com_buffer.length()).toDouble();
-      cc.goTo(new_pos, -new_angle);
-      std_hofmann::debug("Camera: " + String(new_pos, 2) + " " + String(new_angle, 2));
-    } else {
-      String hex = "";
-      for (int x = 0; x < com_buffer.length(); x++) {
-        int character = com_buffer[x];
-        hex += String(character) + " ";
+
+      if (com == "O") {
+        if (sub_com == "INTV") {
+          value_intervall = data.toInt();
+        } else if (sub_com == "LIGT") {
+          unsigned long time = (unsigned long)(data.toDouble() * 1000);  // * 86400000);
+          std_hofmann::debug("Light-time: " + String(time));
+          lc.setTime(time);
+        } else if (sub_com == "PUMP") {
+          double flow = data.toDouble();
+          std_hofmann::debug("Pump Flow: " + String(flow, 1));
+          pc.setFlow(flow);
+        }
+      } else if (com == "C") {
+        if (sub_com == "GO") {
+          int pos = data.indexOf(';');
+          double new_pos = data.substring(0, pos).toDouble();
+          double new_angle = data.substring(pos + 1, data.length()).toDouble();
+          cc.goTo(new_pos, -new_angle);
+          std_hofmann::debug("Camera: " + String(new_pos, 2) + " " + String(new_angle, 2));
+        } else if (sub_com == "R") {
+          cc.reset();
+        }
+      } else {
+        String hex = "";
+        for (int x = 0; x < com_buffer.length(); x++) {
+          int character = com_buffer[x];
+          hex += String(character) + " ";
+        }
+        std_hofmann::debug("NOTHING: " + hex);
       }
-      std_hofmann::debug("NOTHING: " + hex);
     }
     com_buffer = "";
     execute_command = false;
@@ -126,7 +149,9 @@ void loop() {
         if (lvlc.resultAvailable()) {
           double res = lvlc.getResult();
           if (res != -1) {
-            Serial.print("VLEVL" + String(res, 1) + "\n");
+            Serial.print("!VLEVL:" + String(res, 1) + "\n");
+          } else {
+            std_hofmann::debug("Level-reading failed: " + String(lvlc.getMM(), 4));
           }
           level_state = done;
         }
@@ -138,8 +163,8 @@ void loop() {
     static measurement_states light_flow_state = send_value;  // Light & Flow measurement
     switch (light_flow_state) {
       case send_value:
-        Serial.print("VLIGT" + String(lc.getValue() * 24) + "\n");
-        Serial.print("VFLOW" + String(pc.getFlow(), 2) + "\n");
+        Serial.print("!VLIGT:" + String(lc.getValue() * 24) + "\n");
+        Serial.print("!VFLOW:" + String(pc.getFlow(), 2) + "\n");
         light_flow_state = done;
         break;
       case done:
@@ -157,10 +182,10 @@ void loop() {
         break;
       case send_temp:
         if (analogReader::resultAvailable()) {
-          int val = analogReader::getResult();
-          int res = val;
+          double val = analogReader::getResult();
+          double res = map(val, 0, 1023, 0, 32000) / 1000;
           temperature_value = res;
-          Serial.print("VTEMP" + String(res) + "\n");
+          Serial.print("!VTEMP:" + String(res) + "\n");
           temp_ph_ec_state = start_ph;
         }
         break;
@@ -174,7 +199,7 @@ void loop() {
         if (analogReader::resultAvailable()) {
           double val = analogReader::getResult();
           double res = (-5.6548) * val * 5.0 / 1024.0 + 15.509;
-          Serial.print("VPH" + String(res, 5) + "\n");
+          Serial.print("!VPH:" + String(res, 5) + "\n");
           temp_ph_ec_state = start_tds;
         }
         break;
@@ -190,7 +215,7 @@ void loop() {
           double compensationCoefficient = 1.0 + 0.02 * (temperature_value - 25.0);                                                                                                                //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
           double compensationVolatge = (val * 5.0 / 1024.0) / compensationCoefficient;                                                                                                             //temperature compensation
           double tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5;  //convert voltage value to tds value
-          Serial.print("VTDS" + String(tdsValue) + "\n");
+          Serial.print("!VTDS:" + String(tdsValue) + "\n");
           temp_ph_ec_state = done;
         }
         break;

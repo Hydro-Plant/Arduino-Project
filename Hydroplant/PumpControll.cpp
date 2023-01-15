@@ -66,6 +66,11 @@ void PumpControll::update() {
       analogWrite(pump_pin, (int)motor_pwm);
       lastUpdate = cur;
     }
+
+    if((motor_pwm != 0) != this->pump_on) {
+      this->pump_on = (motor_pwm != 0);
+      Serial.print("!SPUMP:" + String(this->pump_on) + "\n");
+    }
   }
 }
 

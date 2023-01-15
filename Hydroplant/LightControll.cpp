@@ -20,13 +20,18 @@ void LightControll::setTime(unsigned long timeperday) {
 
 void LightControll::update() {
   if (std_hofmann::overflowUnsignedLong(millis(), last_update + intv, intv)) {
-    enum state { start_reading,
+    enum state { turn_off, start_reading,
                  execute };
-    static state status = start_reading;
+    static state status = turn_off;
 
     switch (status) {
+      case turn_off:
+        digitalWrite(led_pin, LOW);
+        turn_off_timer = micros();
+        status = start_reading;
+        break;
       case start_reading:
-        if (analogReader::resultWasRead()) {
+        if (analogReader::resultWasRead() && std_hofmann::overflowUnsignedLong(micros(), turn_off_timer + light_turn_off_delay, light_turn_off_delay)) {
           analogReader::startMeasurement(ldr_pin);
           status = execute;
         }
@@ -41,7 +46,7 @@ void LightControll::update() {
             light_status = false;
             light_counter++;
           } else {
-            if (daytime / intv - day_counter <= timeperday / intv - light_counter) {
+            if ((long) (daytime / intv - day_counter) <= (long) (timeperday / intv - light_counter)) {
               if (!light_status) change = true;
               light_status = true;
               digitalWrite(led_pin, HIGH);
@@ -54,7 +59,7 @@ void LightControll::update() {
           }
 
           if (change) {
-            Serial.print("SLIGT" + String(light_status) + "\n");
+            Serial.print("!SLIGT:" + String(light_status) + "\n");
           }
 
           day_counter++;
@@ -64,7 +69,7 @@ void LightControll::update() {
             light_counter = 0;
           }
           last_update += intv;
-          status = start_reading;
+          status = turn_off;
         }
         break;
     }

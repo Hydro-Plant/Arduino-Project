@@ -18,7 +18,9 @@ class LevelControll {
     unsigned long pulse_start = 0;
     bool resultsAv = true;
     bool result_compromised = false;
+    bool measuring_started = false;
     double result = 0;
+    double mm = 0;
 
     static void echo();
     static LevelControll* anchor;
@@ -27,7 +29,8 @@ class LevelControll {
     void setup();
     void startMeasurement();
     bool resultAvailable();
-    double getResult();               // -1 if not valid, [mm]
+    double getResult();               // -1 if not valid, [l]
+    double getMM();
 };
 
 #endif LEVELCONTROLL_H

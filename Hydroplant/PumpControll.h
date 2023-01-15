@@ -22,6 +22,7 @@ class PumpControll {
     double measurement = 0;
     bool new_measurement = false;
     bool zero = true;
+    bool pump_on = false;
 
     double p = 1;
     double Ti = 1;
