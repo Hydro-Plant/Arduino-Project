@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include "CameraControll.h"
 #include "LightControll.h"
 #include "PumpControll.h"
@@ -10,7 +11,8 @@
 #define DIR 4
 #define EN 10
 #define BTN 7
-#define LDR A0
+#define LDR_SDA A4
+#define LDR_SCL A5
 #define LED 6
 #define PUMP 11
 #define FLOW 3
@@ -30,19 +32,20 @@ int value_intervall = 5000;
 unsigned long last_measurement = 0;
 
 CameraControll cc;
-LightControll lc(LDR, LED);
+LightControll lc(LED);
 PumpControll pc(PUMP, FLOW);
 LevelControll lvlc(ECHO, TRIG);
 
 void setup() {
   Serial.begin(115200);
+  Wire.begin();
   last_measurement = millis();
 
   cc.setup(SERVO, DIR, STEP, EN, BTN);
   cc.reset();
 
   // lc.setup(86400000, 54000000, 300000, 1024 / 2);
-  lc.setup(20000, 0, 1000, 360);
+  lc.setup(20000, 0, 1000, 100);
 
   pc.setup();
   pc.setPID(1, 50000, 1);

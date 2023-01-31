@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Wire.h>
 #include "std_hofmann.h"
 #include "analogReader.h"
 
@@ -8,9 +9,9 @@
 class LightControll {
   private:
     const unsigned long light_turn_off_delay = 50;
-    unsigned long turn_off_timer = 0;
+    const unsigned long measurement_delay = 120000;
     
-    int ldr_pin, led_pin;
+    int led_pin;
     unsigned long daytime, timeperday, intv;
     
     unsigned long last_update = 0;
@@ -22,7 +23,7 @@ class LightControll {
     double light_per_day = 0;
     bool light_status = false;
   public:
-    LightControll(int ldr, int led);
+    LightControll(int led);
     void setup(unsigned long daytime, unsigned long timeperday, unsigned long intv, int light_threshold);
     void setTime(unsigned long timeperday);
     void update();
