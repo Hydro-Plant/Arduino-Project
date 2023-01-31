@@ -13,8 +13,8 @@
 #define LDR A0
 #define LED 6
 #define PUMP 11
-#define FLOW 2
-#define ECHO 3
+#define FLOW 3
+#define ECHO 2
 #define TRIG 8
 #define TEMP A1
 #define PH A2
@@ -39,12 +39,13 @@ void setup() {
   last_measurement = millis();
 
   cc.setup(SERVO, DIR, STEP, EN, BTN);
+  cc.reset();
 
   // lc.setup(86400000, 54000000, 300000, 1024 / 2);
   lc.setup(20000, 0, 1000, 360);
 
   pc.setup();
-  pc.setPID(0.1, 0.01, 0.00001);
+  pc.setPID(1, 50000, 1);
   pc.setFlow(0);
 
   lvlc.setup();
@@ -54,12 +55,12 @@ void setup() {
   pinMode(A1, INPUT);
   pinMode(A2, INPUT);
   pinMode(A3, INPUT);
+  interrupts();
 }
 
 void loop() {
   if (Serial.available() > 0) {  // Handle inputs
     char x = Serial.read();
-
     switch (x) {
       case '?':
         delay(1000);

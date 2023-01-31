@@ -12,7 +12,13 @@ static boolean std_hofmann::overflowUnsignedLong(unsigned long value, unsigned l
   return threshold - value >= timer_diff;
 }
 
-static double std_hofmann::deckel(double value, double min, double max) {
+static long std_hofmann::deckel(long value, long min, long max) {
+  if(value < min) value = min;
+  else if(value > max) value = max;
+  return value;
+}
+
+static long std_hofmann::deckel(double value, double min, double max) {
   if(value < min) value = min;
   else if(value > max) value = max;
   return value;

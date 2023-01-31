@@ -27,7 +27,7 @@ void LevelControll::startMeasurement() {
 }
 
 bool LevelControll::resultAvailable() {
-  if (millis() - trigger_start > 1000 && !measuring_started) {
+  if (millis() - trigger_start > 10000 && !measuring_started) {
     result_compromised = true;
     resultsAv = true;
     result = -1;

@@ -29,7 +29,7 @@ void CameraControll::reset() {
 }
 
 void CameraControll::goTo(double pos, double angle) {
-  this->to_angle = servo_zero + (angle * (double)servo_per_ninety_deg / 90);
+  this->to_angle = servo_zero + (angle * (int)servo_per_ninety_deg / 90);
   this->to_pos = max_pos * pos;
   this->from_angle = this->angle;
   this->from_pos = this->pos;

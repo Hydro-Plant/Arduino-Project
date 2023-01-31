@@ -17,69 +17,74 @@ void PumpControll::setup() {
 }
 
 void PumpControll::setPID(double p, double Ti, double Td) {
-  this->p = p;
-  this->Ti = Ti;
-  this->Td = Td;
+  this->p = p * pid_res;
+  this->Ti = Ti * pid_res;
+  this->Td = Td * pid_res;
 }
 
 void PumpControll::setFlow(double wanted_flow) {
-  this->wanted_flow = wanted_flow;
+  this->wanted_flow = wanted_flow * 1000;
 }
 
 double PumpControll::getFlow() {
-  return measurement;
+  return measurement / 1000.0;
 }
 
 void PumpControll::update() {
-  if (std_hofmann::overflowUnsignedLong(micros(), lastUpdate + update_rate, update_rate) && (!zero || wanted_flow > 0)) {
-    unsigned long sum = 0;
-    for (int x = 0; x < mes_len - 1; x++) {
-      sum += measurements[x] - measurements[x + 1];
-    }
-    double averg = (double)sum / (double)(mes_len - 1);
-    measurement = (double)(60000000) / (double)(averg * wave_per_l);
+  static unsigned long lastUpdate = 0;
+  static unsigned long lastPID = 0;
 
+  if (std_hofmann::overflowUnsignedLong(micros(), lastUpdate + update_rate, update_rate)) {
     unsigned long cur = micros();
-    double delta_time = (double)(cur - lastUpdate) / 1000000;
-    if (micros() - measurements[0] > max_diff) {
-      zero = true;
+    unsigned long long pulseLen = lastPulseLength;
+    unsigned long delta_time = cur - lastUpdate;
+
+    if (cur - lastPulses > max_intervall * pulse_measuring_count) {
       measurement = 0;
-      pid_measurements[0] = pid_measurements[1] = pid_measurements[2] = 0;
       new_measurement = true;
-      if (wanted_flow < min_sensor_flow) {
-        motor_pwm = 0;
-      }
+    }else {
+      measurement =  (unsigned long long)1000000 * pulse_to_flow / pulseLen;       // (unsigned long long)1000000000 * pulse_to_flow / (pulseLen * 1000000)
+                                                                                // 1000000000: MHz -> ns = 60mHz
     }
+
+    lastUpdate = cur;
+
+    if (this->wanted_flow < min_sensor_flow) {
+      motor_pwm = 0;
+    }
+
     if (new_measurement) {
-      new_measurement = false;
       pid_measurements[2] = pid_measurements[1];
       pid_measurements[1] = pid_measurements[0];
       pid_measurements[0] = wanted_flow - measurement;
 
-      double P = (pid_measurements[0] - pid_measurements[1]) * this->p;
-      double I = (pid_measurements[0] + pid_measurements[1]) * delta_time / (2 * this->Ti);
-      double D = ((pid_measurements[0] - pid_measurements[1]) - (pid_measurements[1] - pid_measurements[2])) * this->Td / delta_time;
+      long P = (long long) (pid_measurements[0] - pid_measurements[1]) * this->p / pid_res;
+      long I = (long long)(pid_measurements[0] + pid_measurements[1]) * delta_time * pid_res / (2 * this->Ti);
+      long D = (long long) ((pid_measurements[0] - pid_measurements[1]) - (pid_measurements[1] - pid_measurements[2])) * this->Td / (delta_time * pid_res);
 
       motor_pwm += P + I + D;
-      motor_pwm = std_hofmann::deckel(motor_pwm, 0, 255);
+      motor_pwm = std_hofmann::deckel(motor_pwm, 0, max_pwm);
 
-      analogWrite(pump_pin, (int)motor_pwm);
-      lastUpdate = cur;
-    }
 
-    if((motor_pwm != 0) != this->pump_on) {
-      this->pump_on = (motor_pwm != 0);
-      Serial.print("!SPUMP:" + String(this->pump_on) + "\n");
+      if ((motor_pwm != 0) != this->pump_on) {
+        this->pump_on = (motor_pwm != 0);
+        Serial.print("!SPUMP:" + String(this->pump_on) + "\n");
+      }
+
+      new_measurement = false;
+      lastPID = cur;
     }
+    analogWrite(pump_pin, map(motor_pwm, 0, max_pwm, 0, 255));
   }
 }
 
 void PumpControll::flowMeasure() {
-  PumpControll::anchor->zero = false;
   unsigned long cur = micros();
-  for (int x = PumpControll::anchor->mes_len - 1; x > 0; x--) {
-    PumpControll::anchor->measurements[x] = PumpControll::anchor->measurements[x - 1];
+  if (anchor->pulse_counter == anchor->pulse_measuring_count) {
+    anchor->lastPulseLength = (cur - anchor->lastPulses) * 1000 / anchor->pulse_measuring_count;  // ns
+    anchor->lastPulses = cur;
+    anchor->new_measurement = true;
+    anchor->pulse_counter = 0;
   }
-  PumpControll::anchor->measurements[0] = cur;
-  PumpControll::anchor->new_measurement = true;
+  anchor->pulse_counter++;
 }

@@ -6,31 +6,36 @@
 
 class PumpControll {
   private:
-    const double min_sensor_flow = 0.3;    // Smaller = 0; l / min
+    const unsigned long min_sensor_flow = 100;    // Smaller = 0; ml / min
     const unsigned long wave_per_l = 5880;
-    const unsigned long max_diff = 60000000 / (min_sensor_flow * wave_per_l);
+    const unsigned long max_intervall = 60000000000 / (min_sensor_flow * wave_per_l);     // 60000000000: 60.000.000 = min -> µs      1000 = ml -> l
+    const unsigned long pulse_to_flow = 10204;            // * 10^-6
     const unsigned long update_rate = 10000;           // us
+    const unsigned long pulse_measuring_count = 10;
+
+    const long pid_res = 10000;
+    const long pwm_multiplicator = 1000;
+    const long max_pwm = 255 * pwm_multiplicator;
 
     int pump_pin;
     int flow_pin;
 
-    double motor_pwm = 0;
+    long motor_pwm = 0;
 
-    double pid_measurements[3];
-    int mes_len = 20;
-    unsigned long measurements[20];
-    double measurement = 0;
+    long pid_measurements[3];
+    unsigned long measurement = 0;
     bool new_measurement = false;
-    bool zero = true;
     bool pump_on = false;
 
-    double p = 1;
-    double Ti = 1;
-    double Td = 1;
+    long p = 1;
+    long Ti = 1;
+    long Td = 1;
 
-    double wanted_flow = 0;
+    unsigned long wanted_flow = 0;                // ml / min
 
-    unsigned long lastUpdate = 0;
+    unsigned long lastPulses = 0;
+    unsigned long lastPulseLength = 0;
+    unsigned long long pulse_counter = 0;
 
     static void flowMeasure();
     static PumpControll* anchor;

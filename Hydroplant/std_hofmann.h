@@ -8,7 +8,8 @@ public:
   static void debug(String msg);
   static boolean overflowUnsignedLong(unsigned long value, unsigned long threshold);
   static boolean overflowUnsignedLong(unsigned long value, unsigned long threshold, unsigned long timer_diff);
-  static double deckel(double value, double min, double max);
+  static long deckel(long value, long min, long max);
+  static long deckel(double value, double min, double max);
 };
 
 #endif STD_HOFMANN_H
