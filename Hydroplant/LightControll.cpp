@@ -73,7 +73,7 @@ void LightControll::update() {
           }
 
           if (change) {
-            Serial.print("!SLIGT:" + String(light_status) + "\n");
+            Serial.print("!SLED:" + String(light_status) + "\n");
           }
 
           day_counter++;

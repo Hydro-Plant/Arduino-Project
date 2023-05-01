@@ -39,12 +39,12 @@ void PumpControll::update() {
     unsigned long long pulseLen = lastPulseLength;
     unsigned long delta_time = cur - lastUpdate;
 
-    if (cur - lastPulses > max_intervall * pulse_measuring_count) {
+    if (cur - lastPulses > max_intervall * pulse_measuring_count / 1000) {
       measurement = 0;
       new_measurement = true;
     }else {
-      measurement =  (unsigned long long)1000000 * pulse_to_flow / pulseLen;       // (unsigned long long)1000000000 * pulse_to_flow / (pulseLen * 1000000)
-                                                                                // 1000000000: MHz -> ns = 60mHz
+      measurement =  (unsigned long long)1000000000000 / (pulseLen * pulse_to_flow);       // (unsigned long long)1000000000 * pulse_to_flow / (pulseLen * 1000000)
+                                                                                           // 1000000000: MHz -> ns = 60mHz
     }
 
     lastUpdate = cur;

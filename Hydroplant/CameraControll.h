@@ -7,13 +7,13 @@
 #define CAMERACONTROLL_H
 
 class CameraControll {
-  const long microsteping = 32;
+  const long microsteping = 1;
   const long step_per_update = 1;
   const int servo_zero = 98;
   const int servo_per_ninety_deg = 180 / 2;
-  const double steps_per_mm = 200 * microsteping / (0.7 * step_per_update);               // 200 steps/U, 0.7 mm/U
+  const double steps_per_mm = 100 * microsteping / (0.7 * step_per_update);               // 200 steps/U, 0.7 mm/U
   const long max_pos = 45 * steps_per_mm;
-  const double max_speed = 2;                                // mm / s
+  const double max_speed = 4;                                // mm / s
   const double max_acc = 2000;                               // mm / s^2
   const long min_intv = (1000000 / (steps_per_mm * max_speed));
 

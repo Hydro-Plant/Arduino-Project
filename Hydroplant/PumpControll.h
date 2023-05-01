@@ -6,11 +6,10 @@
 
 class PumpControll {
   private:
-    const unsigned long min_sensor_flow = 100;    // Smaller = 0; ml / min
-    const unsigned long wave_per_l = 5880;
-    const unsigned long max_intervall = 60000000000 / (min_sensor_flow * wave_per_l);     // 60000000000: 60.000.000 = min -> µs      1000 = ml -> l
-    const unsigned long pulse_to_flow = 10204;            // * 10^-6
-    const unsigned long update_rate = 10000;           // us
+    const unsigned long min_sensor_flow = 1000;    // Smaller = 0; ml / min
+    const unsigned long pulse_to_flow = 11;            // * 10^-6
+    const unsigned long max_intervall = (unsigned long long)1000000000000 / (min_sensor_flow * pulse_to_flow);     // 60000000000: 60.000.000 = min -> µs      1000 = ml -> l
+    const unsigned long update_rate = 2000;           // us
     const unsigned long pulse_measuring_count = 10;
 
     const long pid_res = 10000;

@@ -7,7 +7,7 @@ class LevelControll {
   private:
     const static unsigned long measure_timeout = 1000000;
     const static double liter_per_mm = 0.2;
-    const static long bottom = 70;
+    const static long bottom = 280;
     const static long max_sonic = 5000;
     const static long min_sonic = 10;
 

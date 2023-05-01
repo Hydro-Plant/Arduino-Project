@@ -1,5 +1,7 @@
 #include "CameraControll.h"
 
+#define EN_ON 0
+
 CameraControll::CameraControll(){
 
 };
@@ -23,7 +25,7 @@ void CameraControll::reset() {
   if (cur_state != moving) {
     cur_state = resetting;
     motor_stopped = false;
-    digitalWrite(this->en_pin, LOW);
+    digitalWrite(this->en_pin, EN_ON);
     delayMicroseconds(10);
   }
 }
@@ -35,9 +37,10 @@ void CameraControll::goTo(double pos, double angle) {
   this->from_pos = this->pos;
   if (!this->firstReset) cur_state = moving;
   this->angle = this->to_angle;
+  std_hofmann::debug("Setting angle to " + String(this->angle));
   servo.write(this->angle);
   motor_stopped = false;
-  digitalWrite(this->en_pin, LOW);
+  digitalWrite(this->en_pin, EN_ON);
   delayMicroseconds(10);
 }
 
@@ -62,7 +65,7 @@ void CameraControll::update() {
     case waiting:
       if (!motor_stopped && std_hofmann::overflowUnsignedLong(micros(), last_step + (this->min_intv), this->min_intv)) {
         motor_stopped = true;
-        digitalWrite(this->en_pin, HIGH);
+        digitalWrite(this->en_pin, !EN_ON);
       }
       break;
     case resetting:
@@ -79,6 +82,7 @@ void CameraControll::update() {
             this->firstReset = false;
             cur_state = moving;
           }
+          std_hofmann::debug("Camera reset");
         } else if (std_hofmann::overflowUnsignedLong(micros(), last_step + (this->min_intv), this->min_intv)) {
           stepper.step();
           pos--;
@@ -108,9 +112,7 @@ void CameraControll::update() {
             last_step = micros();
           } else {
             stepper.setDirection(forward);
-            for (int x = 0; x < step_per_update; x++) {
-              stepper.step();
-            }
+            stepper.step();
             pos++;
             last_step = micros();
           }

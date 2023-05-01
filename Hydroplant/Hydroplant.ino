@@ -15,12 +15,13 @@
 #define LDR_SCL A5
 #define LED 6
 #define PUMP 11
-#define FLOW 3
-#define ECHO 2
+#define FLOW 2
+#define ECHO 3
 #define TRIG 8
-#define TEMP A1
-#define PH A2
+#define TEMP A1       // A1, zurückändern nicht vergessen
+#define PH A2         // A2, zurückändern nicht vergessen
 #define EC A3
+#define BAT A0
 
 const bool demo = false;
 
@@ -31,13 +32,22 @@ String com_buffer = "";
 int value_intervall = 5000;
 unsigned long last_measurement = 0;
 
+uint16_t pt_list[] = 
+{
+  10000, 10039, 10078, 10117, 10156, 10195, 10234, 10273, 10312, 10351,
+  10390, 10429, 10468, 10507, 10546, 10850, 10624, 10663, 10702, 10740,
+  10779, 10818, 10857, 10896, 10935, 10973, 11012, 11051, 11090, 11129,
+  11167, 11206, 11245, 11283, 11322, 11361, 11400, 11438, 11477, 11515,
+  11554, 11593, 11631, 11670, 11708, 11747, 11786, 11824, 11863, 11901
+};
+
 CameraControll cc;
 LightControll lc(LED);
 PumpControll pc(PUMP, FLOW);
 LevelControll lvlc(ECHO, TRIG);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(19200);
   Wire.begin();
   last_measurement = millis();
 
@@ -48,16 +58,18 @@ void setup() {
   lc.setup(20000, 0, 1000, 100);
 
   pc.setup();
-  pc.setPID(1, 50000, 1);
+  pc.setPID(0, 500, 0);
   pc.setFlow(0);
 
   lvlc.setup();
 
+  analogReference(EXTERNAL);
   analogReader::setup();
 
-  pinMode(A1, INPUT);
-  pinMode(A2, INPUT);
-  pinMode(A3, INPUT);
+  pinMode(TEMP, INPUT);
+  pinMode(PH, INPUT);
+  pinMode(EC, INPUT);
+  pinMode(BAT, INPUT);
   interrupts();
 }
 
@@ -141,6 +153,8 @@ void loop() {
                               send_ph,
                               start_tds,
                               send_tds,
+                              start_bat,
+                              send_bat,
                               done };
 
     static measurement_states level_state = start_measurement;  // Level measurement
@@ -186,10 +200,24 @@ void loop() {
         break;
       case send_temp:
         if (analogReader::resultAvailable()) {
-          double val = analogReader::getResult();
-          double res = map(val, 0, 1023, 0, 32000) / 1000;
-          temperature_value = res;
-          Serial.print("!VTEMP:" + String(res) + "\n");
+          long val = analogReader::getResult();
+          unsigned long resistor = (val * (unsigned long long)9960) / (1023 - val);
+          if(resistor < pt_list[0]) {
+            temperature_value = 0;
+          } else if(resistor > pt_list[49]) {
+            temperature_value = 49;
+          } else {
+            for(int x = 0; x < 49; x++) {
+              uint16_t lower = pt_list[x];
+              uint16_t upper = pt_list[x + 1];
+              if(resistor <= upper && resistor >= lower) {
+                temperature_value = x + (resistor - lower) / (double)(upper - lower);
+                break;
+              }
+            }
+          }
+          std_hofmann::debug("T-VAL + RES: " + String(val) + " " + String(resistor));
+          Serial.print("!VTEMP:" + String(temperature_value) + "\n");
           temp_ph_ec_state = start_ph;
         }
         break;
@@ -202,7 +230,7 @@ void loop() {
       case send_ph:
         if (analogReader::resultAvailable()) {
           double val = analogReader::getResult();
-          double res = (-5.6548) * val * 5.0 / 1024.0 + 15.509;
+          double res = (-5.6548) * val * 5.0 / 1023.0 + 15.509;
           Serial.print("!VPH:" + String(res, 5) + "\n");
           temp_ph_ec_state = start_tds;
         }
@@ -220,6 +248,20 @@ void loop() {
           double compensationVolatge = (val * 5.0 / 1024.0) / compensationCoefficient;                                                                                                             //temperature compensation
           double tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5;  //convert voltage value to tds value
           Serial.print("!VTDS:" + String(tdsValue) + "\n");
+          temp_ph_ec_state = start_bat;
+        }
+        break;
+      case start_bat:
+        if (analogReader::resultWasRead()) {
+          analogReader::startMeasurement(BAT);
+          temp_ph_ec_state = send_bat;
+        }
+        break;
+      case send_bat:
+        if (analogReader::resultAvailable()) {
+          int val = analogReader::getResult();
+          long batValue = (long)100 * (val - 682) / (1023 - 682);
+          Serial.print("!VBAT:" + String(batValue) + "\n");
           temp_ph_ec_state = done;
         }
         break;
